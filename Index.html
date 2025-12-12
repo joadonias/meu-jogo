@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clash Mobile Progress - Balanceamento e IA</title>
+    <style>
+        /* Estilos CSS (Gerais e Mobile) */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #333;
+            font-family: sans-serif;
+            user-select: none;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 400px; /* Largura para Mobile */
+            height: 600px; 
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+        }
+
+        #game-container {
+            width: 400px;
+            height: 600px;
+            border: 5px solid #000;
+            background-color: #556B2F; /* Arena Padrão */
+            position: relative;
+            overflow: hidden;
+            cursor: default; 
+            display: none; 
+        }
+
+        /* Tema de Neve para Arena 2 */
+        #game-container.arena-snow {
+            background-color: #A3C1AD; 
+            background-image: linear-gradient(to top, rgba(255, 255, 255, 0.2), transparent);
+        }
+        
+        /* --- Estilos de Login / Menu --- */
+        #login-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 60;
+            text-align: center;
+        }
+
+        #login-screen input {
+            padding: 10px;
+            font-size: 18px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        #login-screen button {
+            padding: 10px 30px;
+            font-size: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        #main-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            display: none; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 50;
+            text-align: center;
+            border: 5px solid #000;
+        }
+
+        #menu-player-info {
+            position: absolute;
+            top: 50px;
+            font-size: 18px;
+            color: #FFD700;
+        }
+        
+        #menu-title {
+            font-size: 40px;
+            color: #FFD700;
+            text-shadow: 3px 3px 5px #000;
+            margin-top: 50px; 
+        }
+
+        #menu-subtitle {
+            font-size: 20px;
+            color: #ccc;
+        }
+
+        #play-btn {
+            padding: 15px 40px;
+            font-size: 24px;
+            background-color: #32CD32;
+            color: white;
+            border: 3px solid #006400;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        /* --- HUD de Progresso em Jogo (XP/Vitórias) --- */
+        #player-hud {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 120px;
+            padding: 5px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 10px;
+            border-radius: 5px;
+            text-align: right;
+            z-index: 15;
+        }
+        
+        #xp-bar {
+            width: 100%;
+            height: 5px;
+            background-color: #555;
+            border-radius: 2px;
+            margin-top: 2px;
+            overflow: hidden;
+        }
+        
+        #xp-level {
+            height: 100%;
+            width: 0%;
+            background-color: #00FFFF;
+        }
+
+        /* --- Estilos da Torre (Base) --- */
+        .base {
+            width: 50px; 
+            height: 50px; 
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            border: 3px solid black;
+            font-size: 8px;
+            text-align: center;
+            padding: 3px;
+            box-sizing: border-box;
+            cursor: default;
+        }
+        
+        /* Posições FIXAS */
+        .base.player {
+            bottom: 50px; 
+        }
+        .base.enemy {
+            top: 50px; 
+        }
+
+        .left-tower { left: 10%; }
+        .right-tower { left: 75%; }
+        .king-tower { left: 40%; } 
+
+        /* --- Estilos de Unidades --- */
+        .unit {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: black;
+            font-size: 10px;
+            font-weight: bold;
+            transition: opacity 0.3s ease;
+            text-align: center;
+        }
+        
+        .unit-hp-bar {
+            width: 80%;
+            height: 3px;
+            background-color: #ccc;
+            border: 1px solid black;
+            margin-top: -15px;
+        }
+        
+        .unit-hp-level {
+            height: 100%;
+            background-color: #32CD32;
+        }
+        
+        /* --- Controles e Elixir (Gotas de Água) --- */
+        #controls-container {
+            position: absolute;
+            bottom: 5px; 
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 5px; 
+            z-index: 10;
+        }
+
+        /* Container de Gotas de Água (Elixir) */
+        #elixir-display-container {
+            position: absolute;
+            top: 50%; 
+            left: 5px; 
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            z-index: 20;
+        }
+
+        .elixir-drop {
+            width: 15px;
+            height: 20px;
+            background-color: #4169E1; 
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            border: 1px solid #00008B;
+            opacity: 0.3; 
+            transition: opacity 0.1s;
+        }
+
+        .elixir-drop.filled {
+            opacity: 1; 
+        }
+        
+        .card-button {
+            width: 70px; 
+            height: 80px; 
+            padding: 3px;
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            background-color: #666;
+            color: white;
+            border: 2px solid #ccc;
+            position: relative;
+        }
+
+        .card-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .card-cost {
+            font-size: 14px;
+            font-weight: bold;
+            color: #00FFFF;
+            text-shadow: 1px 1px 1px black;
+        }
+
+        /* Cooldown Overlay */
+        .card-cooldown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            transition: height 0.1s linear;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <div id="login-screen">
+        <h2>Fazer Login</h2>
+        <input type="text" id="username-input" placeholder="Seu Nome de Jogador" maxlength="15">
+        <button id="login-btn">Entrar</button>
+    </div>
+
+    <div id="main-menu">
+        <div id="menu-player-info">
+            <span id="menu-player-name-display"></span> | LVL <span id="menu-player-level-display">1</span>
+        </div>
+        
+        <div id="menu-title">CLASH: O JOGO</div>
+        <div id="menu-subtitle">ARENA <span id="arena-display">1</span></div>
+        <button id="play-btn">JOGAR</button>
+    </div>
+
+    <div id="game-container">
+        
+        <div id="player-hud">
+            <div id="xp-display">
+                XP: <span id="player-xp-amount">0</span>/500
+            </div>
+            <div id="xp-bar"><div id="xp-level"></div></div>
+            <div id="arena-info">Arena <span id="arena-game-display">1</span> | <span id="win-count-display">0</span>/5 Vitórias</div>
+        </div>
+        
+        <div id="elixir-display-container">
+            <div class="elixir-drop" data-drop="10"></div>
+            <div class="elixir-drop" data-drop="9"></div>
+            <div class="elixir-drop" data-drop="8"></div>
+            <div class="elixir-drop" data-drop="7"></div>
+            <div class="elixir-drop" data-drop="6"></div>
+            <div class="elixir-drop" data-drop="5"></div>
+            <div class="elixir-drop" data-drop="4"></div>
+            <div class="elixir-drop" data-drop="3"></div>
+            <div class="elixir-drop" data-drop="2"></div>
+            <div class="elixir-drop" data-drop="1"></div>
+        </div>
+
+        <div id="tower-enemy-left" class="base enemy left-tower" data-tower-id="TEL">T1 E: 50 HP</div>
+        <div id="tower-enemy-right" class="base enemy right-tower" data-tower-id="TER">T2 E: 50 HP</div>
+        <div id="king-tower-enemy" class="base enemy king-tower" data-tower-id="TKE">REI E: 100 HP</div>
+        
+        <div id="tower-player-left" class="base player left-tower" data-tower-id="TPL">T1 J: 50 HP</div>
+        <div id="tower-player-right" class="base player right-tower" data-tower-id="TPR">T2 J: 50 HP</div>
+        <div id="king-tower-player" class="base player king-tower" data-tower-id="TPK">REI J: 100 HP</div>
+
+        <div id="controls-container">
+            
+            <button id="spawn-pack" class="card-button" data-type="pack" data-cost="5">
+                <span>PACK</span>
+                <span class="card-cost">5</span>
+                <div class="card-cooldown-overlay" data-cooldown-timer="0"></div>
+            </button>
+            <button id="spawn-atirador" class="card-button" data-type="atirador" data-cost="4">
+                <span>ATIRADOR</span>
+                <span class="card-cost">4</span>
+                <div class="card-cooldown-overlay" data-cooldown-timer="0"></div>
+            </button>
+            <button id="spawn-gigante" class="card-button" data-type="gigante" data-cost="7">
+                <span>GIGANTE</span>
+                <span class="card-cost">7</span>
+                <div class="card-cooldown-overlay" data-cooldown-timer="0"></div>
+            </button>
+        </div>
+
+        <div id="message">
+            <span id="game-result-text"></span>
+            <button id="restart-btn">JOGAR DE NOVO</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Configurações do Jogo ---
+    const GAME_FPS = 60;
+    const ELIXIR_RATE_PER_UNIT = 60; // Frames para regenerar 1 unidade (1 Gota por segundo)
+    const MAX_ELIXIR = 10; // Máximo de Gotas
+    const ATTACK_RANGE_DEFAULT = 40; 
+    const TOWER_ATTACK_RANGE = 50; 
+    const CARD_COOLDOWN_FRAMES = 15 * GAME_FPS; // 15 segundos de cooldown
+
+    // ** ATRIBUTOS DAS UNIDADES (Balanceamento de Dano/HP) **
+    const UNIT_TYPES = {
+        pack: { 
+            name: 'Pack', cost: 5, hp: 40, 
+            damage: 120, 
+            // Dano massivo contra Atiradores (300) para priorizar
+            unitDamage: { gigante: 200, atirador: 300, pack: 50 }, 
+            speed: 1.0, color: '#4169E1', attackCooldown: 180, isTank: false, range: ATTACK_RANGE_DEFAULT 
+        }, 
+        atirador: { 
+            name: 'Atirador', cost: 4, hp: 60, 
+            damage: 20, unitDamage: 20, // Dano Base ajustado para 20
+            speed: 1.2, color: '#32CD32', attackCooldown: 120, isTank: false, range: 100 // Alcance aumentado
+        }, 
+        gigante: { 
+            name: 'Gigante', cost: 7, hp: 200, 
+            damage: 30, unitDamage: 30, 
+            speed: 0.5, color: '#FFD700', attackCooldown: 90, isTank: true, range: ATTACK_RANGE_DEFAULT
+        } 
+    };
+    
+    const ENEMY_UNIT_KEYS = ['gigante', 'atirador', 'pack']; 
+
+    // --- Variáveis de Progresso do Jogador ---
+    let playerName = "Jogador";
+    let playerXP = 0;
+    let playerLevel = 1;
+    let playerArena = 1;
+    let currentWins = 0;
+    const XP_TO_NEXT_LEVEL = 500;
+    const WINS_TO_NEXT_ARENA = 5;
+
+    // --- Variáveis de Estado do Jogo ---
+    let currentElixirPlayer = 0;
+    let currentElixirEnemy = 0;
+    let elixirPlayerTimer = 0; 
+    let elixirEnemyTimer = 0; 
+    
+    let units = [];
+    let towers = { player: [], enemy: [] };
+    let playerSpawnX, playerSpawnY, enemySpawnY; 
+    let gameLoopInterval;
+    let isGameOver = false;
+
+    // Cooldowns de Cartas
+    let cardCooldowns = {
+        pack: 0,
+        atirador: 0,
+        gigante: 0
+    };
+    // NOVO: Cooldowns do Bot (para garantir o mesmo tempo do jogador)
+    let botCardCooldowns = {
+        pack: 0,
+        atirador: 0,
+        gigante: 0
+    };
+
+
+    // --- Elementos do DOM ---
+    const loginScreenEl = document.getElementById('login-screen');
+    const usernameInputEl = document.getElementById('username-input');
+    const loginBtnEl = document.getElementById('login-btn');
+    const mainMenuEl = document.getElementById('main-menu');
+    const playBtnEl = document.getElementById('play-btn');
+    const gameContainerEl = document.getElementById('game-container');
+    const cardButtons = document.querySelectorAll('.card-button');
+    const messageEl = document.getElementById('message');
+    const resultTextEl = document.getElementById('game-result-text');
+    const restartBtn = document.getElementById('restart-btn');
+    const elixirDrops = document.querySelectorAll('.elixir-drop'); 
+    
+    const playerXPLevelEl = document.getElementById('xp-level');
+    const playerXPAmountEl = document.getElementById('player-xp-amount');
+    const arenaGameDisplayEl = document.getElementById('arena-game-display');
+    const winCountDisplayEl = document.getElementById('win-count-display');
+    
+    const menuPlayerNameDisplayEl = document.getElementById('menu-player-name-display');
+    const menuPlayerLevelDisplayEl = document.getElementById('menu-player-level-display');
+    const arenaDisplayEl = document.getElementById('arena-display');
+
+
+    // --- Funções de Jogo (Lógica de Alvo e Dano) ---
+
+    function initializeTowers() {
+        const allBases = document.querySelectorAll('.base');
+        towers.player = [];
+        towers.enemy = [];
+        
+        allBases.forEach(el => {
+            const isPlayer = el.classList.contains('player');
+            const isKing = el.id.includes('king');
+            
+            const towerData = {
+                id: el.dataset.towerId,
+                hp: isKing ? 100 : 50,
+                element: el,
+                isKing: isKing,
+                spawnX: el.offsetLeft + el.clientWidth / 2 
+            };
+
+            if (isPlayer) {
+                towers.player.push(towerData);
+            } else {
+                towers.enemy.push(towerData);
+            }
+        });
+        
+        const playerKingEl = document.getElementById('king-tower-player');
+        playerSpawnY = playerKingEl.offsetTop; 
+        
+        const enemyKingEl = document.getElementById('king-tower-enemy');
+        enemySpawnY = enemyKingEl.offsetTop + enemyKingEl.clientHeight; 
+        
+        playerSpawnX = playerKingEl.offsetLeft + playerKingEl.clientWidth / 2 - 15;
+    }
+    
+    function getActiveTowers(isPlayer) {
+        const list = isPlayer ? towers.player : towers.enemy;
+        return list.filter(t => t.hp > 0);
+    }
+    
+    function selectRandomTowerTarget(isPlayer) {
+        const targetList = isPlayer ? getActiveTowers(false) : getActiveTowers(true);
+
+        if (targetList.length === 0) return null;
+        if (targetList.length === 1) return targetList[0];
+        
+        const randomIndex = Math.floor(Math.random() * targetList.length);
+        return targetList[randomIndex];
+    }
+
+    function findClosestEnemyUnit(unit) {
+        let closestUnit = null;
+        let minDistanceSq = Infinity;
+
+        units.forEach(enemyUnit => {
+            if (enemyUnit.isPlayer !== unit.isPlayer && enemyUnit.currentHp > 0) {
+                const dx = enemyUnit.x - unit.x;
+                const dy = enemyUnit.y - unit.y;
+                const distanceSq = dx * dx + dy * dy;
+                
+                // Lógica de Prioridade: Se a unidade for o Pack, ele irá procurar o Atirador primeiro
+                if (unit.name === 'Pack' && enemyUnit.name === 'Atirador') {
+                    // Se o Atirador estiver dentro de 150px, prioriza ele
+                    if (distanceSq < 150 * 150) { 
+                        return enemyUnit; 
+                    }
+                }
+
+                if (distanceSq < minDistanceSq) {
+                    minDistanceSq = distanceSq;
+                    closestUnit = enemyUnit;
+                }
+            }
+        });
+        
+        // Re-checagem para Pack: Prioriza o Atirador se estiver próximo (dentro do range de busca da função)
+        if (unit.name === 'Pack') {
+            const closestAtirador = units.find(e => 
+                e.isPlayer !== unit.isPlayer && 
+                e.name === 'Atirador' && 
+                e.currentHp > 0 && 
+                Math.sqrt(Math.pow(e.x - unit.x, 2) + Math.pow(e.y - unit.y, 2)) < 150
+            );
+            if (closestAtirador) return closestAtirador;
+        }
+
+        return closestUnit; 
+    }
+
+    function spawnUnit(typeKey, isPlayer) {
+        const typeData = UNIT_TYPES[typeKey];
+        const elixirRef = isPlayer ? currentElixirPlayer : currentElixirEnemy;
+        
+        // Verifica se há elixir e se a carta está em cooldown (usando o cooldown correto)
+        const cooldownRef = isPlayer ? cardCooldowns[typeKey] : botCardCooldowns[typeKey];
+        
+        if (elixirRef < typeData.cost || cooldownRef > 0) return false;
+        
+        const targetTower = selectRandomTowerTarget(isPlayer);
+        if (!targetTower) return false;
+
+        const unitEl = document.createElement('div');
+        unitEl.className = 'unit ' + (isPlayer ? 'unit-player' : 'unit-enemy');
+        unitEl.style.backgroundColor = typeData.color;
+
+        const hpBar = document.createElement('div');
+        hpBar.className = 'unit-hp-bar';
+        const hpLevel = document.createElement('div');
+        hpLevel.className = 'unit-hp-level';
+        hpBar.appendChild(hpLevel);
+        
+        unitEl.appendChild(hpBar);
+        
+        const nameText = document.createElement('span');
+        nameText.textContent = `${typeData.name.substring(0, 4)}`;
+        unitEl.appendChild(nameText);
+
+
+        const unitData = {
+            id: Date.now() + Math.random(),
+            element: unitEl,
+            hpBar: hpLevel,
+            isPlayer: isPlayer,
+            name: typeData.name, 
+            ...typeData,
+            maxHp: typeData.hp,
+            currentHp: typeData.hp,
+            attackTimer: typeData.attackCooldown, 
+            
+            x: isPlayer ? playerSpawnX : (targetTower.isKing ? towers.enemy.find(t=>t.isKing).spawnX : targetTower.spawnX) - 15,
+            y: isPlayer ? playerSpawnY : enemySpawnY, 
+            targetTower: targetTower,
+            targetUnit: null 
+        };
+        
+        unitEl.style.left = `${unitData.x}px`;
+        unitEl.style.top = `${unitData.y}px`;
+
+        document.getElementById('game-container').appendChild(unitEl);
+        units.push(unitData);
+
+        if (isPlayer) {
+            currentElixirPlayer -= typeData.cost;
+            cardCooldowns[typeKey] = CARD_COOLDOWN_FRAMES; // Ativa o Cooldown do jogador
+        } else {
+            currentElixirEnemy -= typeData.cost;
+            botCardCooldowns[typeKey] = CARD_COOLDOWN_FRAMES; // Ativa o Cooldown do bot
+        }
+        return true;
+    }
+
+    function calculateUnitDamage(attacker, target) {
+        // Se o dano for definido por objeto (Pack), usa o dano específico
+        if (typeof attacker.unitDamage === 'object') {
+            const targetType = target.name ? target.name.toLowerCase() : 'pack'; 
+            return attacker.unitDamage[targetType] || attacker.damage; 
+        }
+        // Caso contrário (Atirador, Gigante), usa o dano base
+        return attacker.unitDamage || attacker.damage; 
+    }
+
+    function updateUnits() {
+        for (let i = units.length - 1; i >= 0; i--) {
+            const unit = units[i];
+            
+            if (unit.currentHp <= 0) {
+                unit.element.style.opacity = '0';
+                unit.element.remove();
+                units.splice(i, 1);
+                continue;
+            }
+
+            // --- 1. Definir Alvo ---
+            let currentTarget = null;
+            let shouldAttackTower = false;
+
+            // Gigante (Tank) sempre mira a torre se houver
+            if (!unit.isTank) {
+                unit.targetUnit = findClosestEnemyUnit(unit);
+            } else {
+                 unit.targetUnit = null; 
+            }
+
+            if (unit.targetUnit) {
+                currentTarget = unit.targetUnit;
+            } else {
+                if (unit.targetTower.hp <= 0) {
+                    const newTarget = selectRandomTowerTarget(unit.isPlayer);
+                    if (newTarget) unit.targetTower = newTarget;
+                }
+                
+                if (unit.targetTower.hp > 0) {
+                    currentTarget = unit.targetTower;
+                    shouldAttackTower = true;
+                } else {
+                    continue; 
+                }
+            }
+
+
+            // --- 2. Combate / Movimento ---
+            
+            let targetX = currentTarget.x || currentTarget.spawnX;
+            let targetY = currentTarget.y || (currentTarget.element.offsetTop + (currentTarget.isKing !== undefined && !unit.isPlayer ? currentTarget.element.clientHeight : 0));
+            
+            const dx = targetX - unit.x;
+            const dy = targetY - unit.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            let isTargetInRange;
+            
+            if (shouldAttackTower) {
+                isTargetInRange = distance <= TOWER_ATTACK_RANGE; 
+            } else {
+                isTargetInRange = distance <= unit.range; 
+            }
+
+            if (unit.isTank && shouldAttackTower && distance > 5) {
+                isTargetInRange = false; 
+            }
+
+            if (isTargetInRange) {
+                unit.attackTimer++;
+                
+                if (unit.attackTimer >= unit.attackCooldown) {
+                    
+                    let damageToApply;
+                    
+                    if (currentTarget.isKing !== undefined) { 
+                        damageToApply = unit.damage;
+                        currentTarget.hp = Math.max(0, currentTarget.hp - damageToApply);
+                        currentTarget.element.textContent = `${currentTarget.element.textContent.split(':')[0].substring(0, 4)}: ${currentTarget.hp} HP`;
+                        if (currentTarget.hp <= 0) currentTarget.element.classList.add('destroyed');
+                    } else { 
+                        damageToApply = calculateUnitDamage(unit, currentTarget);
+                        currentTarget.currentHp = Math.max(0, currentTarget.currentHp - damageToApply);
+                        currentTarget.hpBar.style.width = `${(currentTarget.currentHp / currentTarget.maxHp) * 100}%`;
+                    }
+                    unit.attackTimer = 0; 
+                }
+            } 
+            
+            if (!isTargetInRange || (unit.isTank && shouldAttackTower)) {
+                
+                if (distance > unit.speed) {
+                    unit.x += (dx / distance) * unit.speed;
+                    unit.y += (dy / distance) * unit.speed;
+                    unit.attackTimer = 0; 
+                }
+                
+                unit.element.style.left = `${unit.x}px`;
+                unit.element.style.top = `${unit.y}px`;
+            }
+            
+            unit.x = parseFloat(unit.element.style.left);
+            unit.y = parseFloat(unit.element.style.top);
+        }
+    }
+
+    // --- Lógica de Regeneração por Gotas de Água e Cooldown ---
+    
+    function updateElixir(isPlayer) {
+        
+        let currentElixir = isPlayer ? currentElixirPlayer : currentElixirEnemy;
+        let elixirTimer = isPlayer ? elixirPlayerTimer : elixirEnemyTimer;
+        
+        if (currentElixir < MAX_ELIXIR) {
+            elixirTimer++;
+            
+            if (elixirTimer >= ELIXIR_RATE_PER_UNIT) {
+                currentElixir++;
+                elixirTimer = 0; 
+            }
+        } else {
+            elixirTimer = 0;
+        }
+
+        if (isPlayer) {
+            currentElixirPlayer = currentElixir;
+            elixirPlayerTimer = elixirTimer;
+            
+            elixirDrops.forEach((drop) => {
+                const dropValue = parseInt(drop.dataset.drop);
+                if (dropValue <= currentElixirPlayer) {
+                    drop.classList.add('filled');
+                } else {
+                    drop.classList.remove('filled');
+                }
+            });
+
+            cardButtons.forEach(btn => {
+                const typeKey = btn.dataset.type;
+                const unitCost = parseInt(btn.dataset.cost);
+                const cooldownOverlay = btn.querySelector('.card-cooldown-overlay');
+
+                // 1. Cooldown
+                if (cardCooldowns[typeKey] > 0) {
+                    cardCooldowns[typeKey]--;
+                    btn.disabled = true;
+
+                    const remainingSeconds = Math.ceil(cardCooldowns[typeKey] / GAME_FPS);
+                    const remainingHeight = (cardCooldowns[typeKey] / CARD_COOLDOWN_FRAMES) * 100;
+
+                    cooldownOverlay.style.height = `${remainingHeight}%`;
+                    cooldownOverlay.textContent = remainingSeconds > 0 ? remainingSeconds : '';
+                    cooldownOverlay.style.display = 'flex';
+                } else {
+                    // 2. Elixir Check
+                    btn.disabled = currentElixirPlayer < unitCost;
+                    cooldownOverlay.style.height = '0%';
+                    cooldownOverlay.style.display = 'none';
+                    cooldownOverlay.textContent = '';
+                }
+            });
+
+        } else {
+            currentElixirEnemy = currentElixir;
+            elixirEnemyTimer = elixirTimer;
+            
+            // NOVO: Decrementa o cooldown de cartas do Bot
+            for (const key in botCardCooldowns) {
+                if (botCardCooldowns[key] > 0) {
+                    botCardCooldowns[key]--;
+                }
+            }
+
+            enemyAISpawn();
+        }
+    }
+    
+    // NOVO: Função de IA Aprimorada (com Estratégia e Cooldown)
+    function enemyAISpawn() {
+        if (currentElixirEnemy === 0) return;
+
+        let unitToPlay = null;
+        let highestPriority = -1;
+
+        // Ameaças em campo: verifica se há algum Atirador ativo do jogador.
+        const playerAtiradorCount = units.filter(u => u.isPlayer && u.name === 'Atirador' && u.currentHp > 0).length;
+        
+        // Filtra apenas cartas disponíveis (com Elixir e sem Cooldown)
+        const availableCards = ENEMY_UNIT_KEYS.filter(key => {
+            const data = UNIT_TYPES[key];
+            return currentElixirEnemy >= data.cost && botCardCooldowns[key] <= 0;
+        });
+
+        // --- 2. Analisa as Prioridades ---
+        for (const typeKey of availableCards) {
+            const typeData = UNIT_TYPES[typeKey];
+            let priority = 0;
+
+            // Prioridade 1: Contra-ataque ao Atirador
+            if (typeKey === 'pack' && playerAtiradorCount > 0) {
+                priority = 100; 
+            } 
+            // Prioridade 2: Jogar Tank no início ou com Elixir cheio
+            else if (typeKey === 'gigante' && (currentElixirEnemy >= 9 || units.filter(u => !u.isPlayer).length === 0)) {
+                priority = 80; 
+            }
+            // Prioridade 3: Unidade de Suporte (Atirador)
+            else if (typeKey === 'atirador' && currentElixirEnemy >= 7) {
+                priority = 60; 
+            }
+            // Prioridade 4: Ciclar Cartas/Forçar Ação (Pack é a opção padrão)
+            else if (typeKey === 'pack' && currentElixirEnemy >= 5) {
+                 priority = 50; 
+            }
+            // Prioridade 5: Se o Elixir estiver quase no máximo, joga o que for mais caro disponível para não desperdiçar.
+            else if (currentElixirEnemy >= 9) {
+                priority = 40;
+            }
+
+            if (priority > highestPriority) {
+                highestPriority = priority;
+                unitToPlay = typeKey;
+            }
+        }
+        
+        // --- 3. Execução da Jogada ---
+        if (unitToPlay) {
+            // Usa a carta (spawnUnit cuida do Elixir e do Cooldown do bot)
+            const wasPlayed = spawnUnit(unitToPlay, false);
+            
+            if (wasPlayed) {
+                // Simula o tempo de raciocínio humano adicionando um pequeno delay na próxima gota de elixir
+                elixirEnemyTimer += Math.floor(Math.random() * 60) + 30; // 0.5s a 1.5s de delay
+            }
+        }
+    }
+
+
+    function checkWinCondition() {
+        const activeEnemyKing = towers.enemy.find(t => t.isKing && t.hp > 0);
+        const activeEnemyTowers = getActiveTowers(false);
+        const activePlayerKing = towers.player.find(t => t.isKing && t.hp > 0);
+        const activePlayerTowers = getActiveTowers(true);
+
+        isGameOver = false;
+        let resultMessage = "";
+
+        if (!activeEnemyKing || activeEnemyTowers.length === 0) {
+            isGameOver = true;
+            resultMessage = "🏆 VITÓRIA! +50 XP 🏆";
+            addXP(50);
+            currentWins++;
+            checkArenaProgression();
+        } 
+        else if (!activePlayerKing || activePlayerTowers.length === 0) {
+            isGameOver = true;
+            resultMessage = "DEFEITO! 😭";
+        }
+
+        if (isGameOver) {
+            clearInterval(gameLoopInterval);
+            resultTextEl.textContent = resultMessage;
+            messageEl.style.display = 'flex';
+            cardButtons.forEach(btn => btn.disabled = true);
+        }
+    }
+
+    function gameLoop() {
+        if (isGameOver) return;
+
+        updateElixir(true);
+        updateElixir(false);
+        
+        updateUnits();
+        
+        checkWinCondition();
+    }
+    
+    function setupGame() {
+        initializeTowers(); 
+        
+        units.forEach(unit => unit.element.remove());
+        units = [];
+        
+        currentElixirPlayer = 0;
+        currentElixirEnemy = 0;
+        elixirPlayerTimer = 0; 
+        elixirEnemyTimer = 0; 
+        
+        // Reset dos Cooldowns (Jogador e Bot)
+        cardCooldowns = { pack: 0, atirador: 0, gigante: 0 };
+        botCardCooldowns = { pack: 0, atirador: 0, gigante: 0 };
+        
+        isGameOver = false;
+
+        towers.player.forEach(t => {
+            t.hp = t.isKing ? 100 : 50;
+            t.element.textContent = `${t.element.textContent.split(':')[0].substring(0, 4)}: ${t.hp} HP`;
+            t.element.classList.remove('destroyed');
+        });
+        towers.enemy.forEach(t => {
+            t.hp = t.isKing ? 100 : 50;
+            t.element.textContent = `${t.element.textContent.split(':')[0].substring(0, 4)}: ${t.hp} HP`;
+            t.element.classList.remove('destroyed');
+        });
+        
+        messageEl.style.display = 'none';
+        
+        updateHUD(); 
+        updateElixir(true); 
+    }
+
+    function startGame() {
+        clearInterval(gameLoopInterval); 
+        
+        mainMenuEl.style.display = 'none';
+        gameContainerEl.style.display = 'block'; 
+        
+        setupGame();
+        
+        gameLoopInterval = setInterval(gameLoop, 1000 / GAME_FPS);
+    }
+
+    // --- Funções de Progresso e Event Listeners (Mantidas) ---
+
+    function updateHUD() {
+        menuPlayerNameDisplayEl.textContent = playerName;
+        menuPlayerLevelDisplayEl.textContent = playerLevel;
+        arenaDisplayEl.textContent = playerArena;
+        
+        playerXPAmountEl.textContent = playerXP;
+        arenaGameDisplayEl.textContent = playerArena;
+        winCountDisplayEl.textContent = `${currentWins}/${WINS_TO_NEXT_ARENA}`;
+
+        const xpPercentage = Math.min(100, (playerXP / XP_TO_NEXT_LEVEL) * 100);
+        playerXPLevelEl.style.width = `${xpPercentage}%`;
+        
+        if (playerArena > 1) {
+            gameContainerEl.classList.add('arena-snow');
+        } else {
+            gameContainerEl.classList.remove('arena-snow');
+        }
+    }
+
+    function addXP(amount) {
+        playerXP += amount;
+        
+        while (playerXP >= XP_TO_NEXT_LEVEL) {
+            playerLevel++;
+            playerXP -= XP_TO_NEXT_LEVEL; 
+            console.log(`PARABÉNS! Você subiu para o Nível ${playerLevel}!`);
+        }
+        
+        updateHUD();
+    }
+    
+    function checkArenaProgression() {
+        if (currentWins >= WINS_TO_NEXT_ARENA) {
+            playerArena++;
+            currentWins = 0;
+            console.log(`AVANÇO! Você chegou à Arena ${playerArena}!`);
+            updateHUD();
+        }
+    }
+
+
+    cardButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.disabled || isGameOver) return;
+            spawnUnit(btn.dataset.type, true);
+        });
+    });
+
+    loginBtnEl.addEventListener('click', () => {
+        const inputName = usernameInputEl.value.trim();
+        if (inputName) {
+            playerName = inputName;
+            loginScreenEl.style.display = 'none';
+            mainMenuEl.style.display = 'flex';
+            updateHUD();
+        } else {
+            alert("Por favor, digite um nome de jogador.");
+        }
+    });
+
+    playBtnEl.addEventListener('click', startGame);
+
+    restartBtn.addEventListener('click', () => {
+        mainMenuEl.style.display = 'flex'; 
+        gameContainerEl.style.display = 'none'; 
+        messageEl.style.display = 'none'; 
+        updateHUD(); 
+    });
+
+    initializeTowers(); 
+</script>
+
+</body>
+</html>
